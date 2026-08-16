@@ -43,6 +43,15 @@ The expansion board USES 3.5v ~ 5.5v power supply, 3.5mm plug and wiring two pow
 ### 7.Stop all motors
 ![image](https://github.com/DFRobot/pxt-motor/blob/master/image/4.png)
 
+### 8.Set PWM frequency (marugotoassist fork addition)
+`Set PWM frequency %frequency Hz` / `PWM周波数を設定 %frequency Hz`
+
+Sets the PCA9685 PWM frequency used for all motor and servo channels.
+Range 24Hz ~ 1526Hz (PCA9685 hardware limit), default 50Hz (same as upstream).
+Call it in `on start` before driving motors. Higher frequencies (e.g. 1526Hz)
+smooth out low-speed DC motor operation, but **RC servos require 50Hz** and will
+not work correctly at other frequencies.
+
 
 ## License
 
@@ -53,5 +62,5 @@ GNU
 * for PXT/microbit
 (The metadata above is needed for package search.)
 ```package
-gamePad=github:DFRobot/pxt-motor
+motor=github:marugotoassist/pxt-motor
 ```

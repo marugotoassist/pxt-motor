@@ -1,6 +1,8 @@
 {
     "motor.Dir.CW|block": "正転",
     "motor.Dir.CCW|block": "逆転",
+    "motor.setPwmFrequency|block": "PWM周波数を設定|%frequency|Hz",
+    "motor.getPwmFrequency|block": "PWM周波数 (Hz)",
     "motor.servo|block": "サーボ|%index|角度|%degree",
     "motor.MotorRun|block": "モーター|%index|方向|%Dir|速度|%speed",
     "motor.stepperDegree_42|block": "ステッパー42|%index|方向|%direction|角度|%degree",

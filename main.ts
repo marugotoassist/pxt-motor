@@ -114,6 +114,11 @@ namespace motor {
 
 
     let initialized = false
+    // PWM frequency (Hz) used for PCA9685. Default 50Hz (servo compatible).
+    // PCA9685 supports about 24Hz ~ 1526Hz (25MHz internal oscillator).
+    const PWM_FREQ_MIN = 24
+    const PWM_FREQ_MAX = 1526
+    let pwmFrequency = 50
 
     function i2cWrite(addr: number, reg: number, value: number) {
         let buf = pins.createBuffer(2)
@@ -136,7 +141,7 @@ namespace motor {
 
     function initPCA9685(): void {
         i2cWrite(PCA9685_ADDRESS, MODE1, 0x00)
-        setFreq(50);
+        setFreq(pwmFrequency);
         initialized = true
     }
 
@@ -146,7 +151,9 @@ namespace motor {
         prescaleval /= 4096;
         prescaleval /= freq;
         prescaleval -= 1;
-        let prescale = prescaleval;//Math.floor(prescaleval + 0.5);
+        let prescale = Math.floor(prescaleval + 0.5);
+        if (prescale < 3) prescale = 3;       // PCA9685 hardware minimum (about 1526Hz)
+        if (prescale > 255) prescale = 255;   // PCA9685 hardware maximum (about 24Hz)
         let oldmode = i2cRead(PCA9685_ADDRESS, MODE1);
         let newmode = (oldmode & 0x7F) | 0x10; // sleep
         i2cWrite(PCA9685_ADDRESS, MODE1, newmode); // go to sleep
@@ -227,6 +234,33 @@ namespace motor {
         }
     }
 
+
+    /**
+     * Set the PWM frequency of the PCA9685 (applies to all motors and servos).
+     * 24Hz ~ 1526Hz. Default 50Hz. Servos require 50Hz.
+    */
+    //% weight=95
+    //% blockId=motor_setPwmFrequency block="Set PWM frequency|%frequency|Hz"
+    //% frequency.min=24 frequency.max=1526 frequency.defl=50
+    export function setPwmFrequency(frequency: number): void {
+        if (frequency < PWM_FREQ_MIN) frequency = PWM_FREQ_MIN
+        if (frequency > PWM_FREQ_MAX) frequency = PWM_FREQ_MAX
+        pwmFrequency = frequency
+        if (!initialized) {
+            initPCA9685()
+        } else {
+            setFreq(pwmFrequency)
+        }
+    }
+
+    /**
+     * Get the current PWM frequency (Hz).
+    */
+    //% weight=94
+    //% blockId=motor_getPwmFrequency block="PWM frequency (Hz)"
+    export function getPwmFrequency(): number {
+        return pwmFrequency
+    }
 
     /**
 	 * Steering gear control function.
