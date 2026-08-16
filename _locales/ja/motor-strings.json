@@ -3,6 +3,8 @@
     "motor.Dir.CCW|block": "逆転",
     "motor.setPwmFrequency|block": "PWM周波数を設定|%frequency|Hz",
     "motor.getPwmFrequency|block": "PWM周波数 (Hz)",
+    "motor.setKickStart|block": "起動ブーストを設定|デューティ|%duty|時間 (ms)|%ms",
+    "motor.setMinSpeed|block": "最低速度を設定|%min",
     "motor.servo|block": "サーボ|%index|角度|%degree",
     "motor.MotorRun|block": "モーター|%index|方向|%Dir|速度|%speed",
     "motor.stepperDegree_42|block": "ステッパー42|%index|方向|%direction|角度|%degree",

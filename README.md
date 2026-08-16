@@ -52,6 +52,19 @@ Call it in `on start` before driving motors. Higher frequencies (e.g. 1526Hz)
 smooth out low-speed DC motor operation, but **RC servos require 50Hz** and will
 not work correctly at other frequencies.
 
+### 9.Kick start / minimum speed (marugotoassist fork addition)
+`Set kick start duty %duty time (ms) %ms` / `起動ブーストを設定 デューティ %duty 時間 (ms) %ms`
+
+When a DC motor starts from stop (or reverses), drive it at `duty` (0~255) for `ms`
+milliseconds before applying the target speed, so low target speeds can overcome static
+friction. Only applies when the target speed is lower than `duty`. `ms = 0` disables (default).
+Note: `Motor` block pauses for `ms` while kicking.
+
+`Set minimum speed %min` / `最低速度を設定 %min`
+
+Dead-band compensation: speed 1~255 is remapped linearly to `min`~255. Measure the lowest
+speed that keeps your motor turning and set it here. `0` disables (default).
+
 
 ## License
 

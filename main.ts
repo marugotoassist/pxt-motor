@@ -119,6 +119,15 @@ namespace motor {
     const PWM_FREQ_MIN = 24
     const PWM_FREQ_MAX = 1526
     let pwmFrequency = 50
+    // Kick start (startup boost): when a motor starts from stop (or reverses),
+    // drive it at kickDuty (0~255) for kickMs before applying the target speed.
+    // Disabled when kickMs == 0.
+    let kickDuty = 0
+    let kickMs = 0
+    // Dead-band compensation: remap speed 1~255 to minSpeed~255. 0 = disabled.
+    let minSpeed = 0
+    // Last signed speed (0~255 scale, sign = direction) per motor M1~M4 (index 1..4).
+    let lastSpeed = [0, 0, 0, 0, 0]
 
     function i2cWrite(addr: number, reg: number, value: number) {
         let buf = pins.createBuffer(2)
@@ -263,6 +272,59 @@ namespace motor {
     }
 
     /**
+     * Set kick start (startup boost). When a motor starts from stop or reverses,
+     * it is driven at "duty" (0~255) for "ms" milliseconds before the target speed is applied.
+     * Set ms to 0 to disable. Only applies when the target speed is lower than duty.
+    */
+    //% weight=93
+    //% blockId=motor_setKickStart block="Set kick start|duty|%duty|time (ms)|%ms"
+    //% duty.min=0 duty.max=255 duty.defl=200
+    //% ms.min=0 ms.max=1000 ms.defl=100
+    export function setKickStart(duty: number, ms: number): void {
+        if (duty < 0) duty = 0
+        if (duty > 255) duty = 255
+        if (ms < 0) ms = 0
+        kickDuty = duty
+        kickMs = ms
+    }
+
+    /**
+     * Set minimum effective speed (dead-band compensation).
+     * speed 1~255 is remapped linearly to min~255 so that low speed values still move the motor.
+     * Set to 0 to disable. Measure the lowest speed that keeps the motor turning and use that.
+    */
+    //% weight=92
+    //% blockId=motor_setMinSpeed block="Set minimum speed|%min"
+    //% min.min=0 min.max=254 min.defl=0
+    export function setMinSpeed(min: number): void {
+        if (min < 0) min = 0
+        if (min > 254) min = 254
+        minSpeed = min
+    }
+
+    function applyMinSpeed(speed: number): number {
+        if (minSpeed <= 0 || speed <= 0) return speed
+        if (speed > 255) speed = 255
+        return Math.round(minSpeed + (255 - minSpeed) * (speed - 1) / 254)
+    }
+
+    function writeMotor(index: number, signedSpeed: number): void {
+        // signedSpeed: -255..255
+        let v = signedSpeed * 16 // map 255 to 4096
+        if (v >= 4096) v = 4095
+        if (v <= -4096) v = -4095
+        let pn = (4 - index) * 2
+        let pp = (4 - index) * 2 + 1
+        if (v >= 0) {
+            setPwm(pp, 0, v)
+            setPwm(pn, 0, 0)
+        } else {
+            setPwm(pp, 0, 0)
+            setPwm(pn, 0, -v)
+        }
+    }
+
+    /**
 	 * Steering gear control function.
      * S1~S8.
      * 0°~180°.
@@ -295,24 +357,24 @@ namespace motor {
         if (!initialized) {
             initPCA9685()
         }
-        speed = speed * 16 * direction; // map 255 to 4096
-        if (speed >= 4096) {
-            speed = 4095
-        }
-        if (speed <= -4096) {
-            speed = -4095
-        }
         if (index > 4 || index <= 0)
             return
-        let pn = (4 - index) * 2
-        let pp = (4 - index) * 2 + 1
-        if (speed >= 0) {
-            setPwm(pp, 0, speed)
-            setPwm(pn, 0, 0)
-        } else {
-            setPwm(pp, 0, 0)
-            setPwm(pn, 0, -speed)
+        let sign = direction > 0 ? 1 : -1
+        if (speed < 0) { // keep upstream behaviour: negative speed flips direction
+            speed = -speed
+            sign = -sign
         }
+        if (speed > 255) speed = 255
+        let target = applyMinSpeed(speed) * sign // signed, -255..255
+        let prev = lastSpeed[index]
+        // Kick start: starting from stop, or reversing direction, with a target weaker than the kick.
+        let fromStop = (prev == 0) || (prev > 0 && target < 0) || (prev < 0 && target > 0)
+        if (kickMs > 0 && target != 0 && fromStop && Math.abs(target) < kickDuty) {
+            writeMotor(index, kickDuty * sign)
+            basic.pause(kickMs)
+        }
+        writeMotor(index, target)
+        lastSpeed[index] = target
     }
 
     /**
@@ -535,6 +597,7 @@ namespace motor {
     export function motorStop(index: Motors) {
         setPwm((4 - index) * 2, 0, 0);
         setPwm((4 - index) * 2 + 1, 0, 0);
+        if (index >= 1 && index <= 4) lastSpeed[index] = 0
     }
 
     /**
