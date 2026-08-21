@@ -392,8 +392,10 @@ namespace motor {
     */
     //% weight=89
     //% blockId=motor_motorRunDual block="Motor|%index1|dir|%direction1|speed|%speed1|and Motor|%index2|dir|%direction2|speed|%speed2"
+    //% inlineInputMode=inline
     //% speed1.min=0 speed1.max=255
     //% speed2.min=0 speed2.max=255
+    //% index2.defl=Motors.M2
     //% index1.fieldEditor="gridpicker" index1.fieldOptions.columns=2
     //% direction1.fieldEditor="gridpicker" direction1.fieldOptions.columns=2
     //% index2.fieldEditor="gridpicker" index2.fieldOptions.columns=2

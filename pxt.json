@@ -1,6 +1,6 @@
 {
     "name": "motor",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "This is dc motor, stepper motor, steering gear library.",
     "license": "GNU",
     "dependencies": {
