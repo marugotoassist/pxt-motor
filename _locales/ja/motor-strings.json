@@ -7,6 +7,7 @@
     "motor.setMinSpeed|block": "最低速度を設定|%min",
     "motor.servo|block": "サーボ|%index|角度|%degree",
     "motor.MotorRun|block": "モーター|%index|方向|%Dir|速度|%speed",
+    "motor.MotorRunDual|block": "モーター|%index1|方向|%direction1|速度|%speed1|とモーター|%index2|方向|%direction2|速度|%speed2",
     "motor.stepperDegree_42|block": "ステッパー42|%index|方向|%direction|角度|%degree",
     "motor.stepperTurn_42|block": "ステッパー42|%index|方向|%direction|回転数|%turn",
     "motor.stepperDegree_28|block": "ステッパー28|%index|方向|%direction|角度|%degree",

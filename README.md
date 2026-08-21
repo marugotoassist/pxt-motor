@@ -65,6 +65,14 @@ Note: `Motor` block pauses for `ms` while kicking.
 Dead-band compensation: speed 1~255 is remapped linearly to `min`~255. Measure the lowest
 speed that keeps your motor turning and set it here. `0` disables (default).
 
+### 10.Dual motor run (marugotoassist fork addition)
+`Motor %index1 dir %direction1 speed %speed1 and Motor %index2 dir %direction2 speed %speed2`
+
+Runs two motors in one block. When kick start is enabled, both motors are kicked in the
+**same** period (a single wait), so a differential drive robot starts straight instead of
+veering — two separate `Motor` blocks kick sequentially and the second wheel starts one
+kick-time later. Use this for left/right wheels.
+
 
 ## License
 

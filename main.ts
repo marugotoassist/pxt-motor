@@ -308,6 +308,23 @@ namespace motor {
         return Math.round(minSpeed + (255 - minSpeed) * (speed - 1) / 254)
     }
 
+    function computeTarget(direction: number, speed: number): number {
+        let sign = direction > 0 ? 1 : -1
+        if (speed < 0) { // keep upstream behaviour: negative speed flips direction
+            speed = -speed
+            sign = -sign
+        }
+        if (speed > 255) speed = 255
+        return applyMinSpeed(speed) * sign // signed, -255..255
+    }
+
+    function needsKick(index: number, target: number): boolean {
+        // Kick start: starting from stop, or reversing direction, with a target weaker than the kick.
+        let prev = lastSpeed[index]
+        let fromStop = (prev == 0) || (prev > 0 && target < 0) || (prev < 0 && target > 0)
+        return kickMs > 0 && target != 0 && fromStop && Math.abs(target) < kickDuty
+    }
+
     function writeMotor(index: number, signedSpeed: number): void {
         // signedSpeed: -255..255
         let v = signedSpeed * 16 // map 255 to 4096
@@ -359,22 +376,53 @@ namespace motor {
         }
         if (index > 4 || index <= 0)
             return
-        let sign = direction > 0 ? 1 : -1
-        if (speed < 0) { // keep upstream behaviour: negative speed flips direction
-            speed = -speed
-            sign = -sign
-        }
-        if (speed > 255) speed = 255
-        let target = applyMinSpeed(speed) * sign // signed, -255..255
-        let prev = lastSpeed[index]
-        // Kick start: starting from stop, or reversing direction, with a target weaker than the kick.
-        let fromStop = (prev == 0) || (prev > 0 && target < 0) || (prev < 0 && target > 0)
-        if (kickMs > 0 && target != 0 && fromStop && Math.abs(target) < kickDuty) {
-            writeMotor(index, kickDuty * sign)
+        let target = computeTarget(direction, speed)
+        if (needsKick(index, target)) {
+            writeMotor(index, target > 0 ? kickDuty : -kickDuty)
             basic.pause(kickMs)
         }
         writeMotor(index, target)
         lastSpeed[index] = target
+    }
+
+    /**
+	 * Execute two motors at the same time. The kick start (if enabled) is applied to
+     * both motors simultaneously, so a differential drive robot starts straight.
+     * Use this instead of two Motor blocks for left/right wheels.
+    */
+    //% weight=89
+    //% blockId=motor_motorRunDual block="Motor|%index1|dir|%direction1|speed|%speed1|and Motor|%index2|dir|%direction2|speed|%speed2"
+    //% speed1.min=0 speed1.max=255
+    //% speed2.min=0 speed2.max=255
+    //% index1.fieldEditor="gridpicker" index1.fieldOptions.columns=2
+    //% direction1.fieldEditor="gridpicker" direction1.fieldOptions.columns=2
+    //% index2.fieldEditor="gridpicker" index2.fieldOptions.columns=2
+    //% direction2.fieldEditor="gridpicker" direction2.fieldOptions.columns=2
+    export function MotorRunDual(index1: Motors, direction1: Dir, speed1: number, index2: Motors, direction2: Dir, speed2: number): void {
+        if (!initialized) {
+            initPCA9685()
+        }
+        if (index1 > 4 || index1 <= 0 || index2 > 4 || index2 <= 0)
+            return
+        if (index1 == index2) {
+            MotorRun(index1, direction1, speed1)
+            return
+        }
+        let t1 = computeTarget(direction1, speed1)
+        let t2 = computeTarget(direction2, speed2)
+        let k1 = needsKick(index1, t1)
+        let k2 = needsKick(index2, t2)
+        if (k1 || k2) {
+            // Kick both motors in the same period: kicked ones get kickDuty,
+            // the other one gets its target right away.
+            writeMotor(index1, k1 ? (t1 > 0 ? kickDuty : -kickDuty) : t1)
+            writeMotor(index2, k2 ? (t2 > 0 ? kickDuty : -kickDuty) : t2)
+            basic.pause(kickMs)
+        }
+        writeMotor(index1, t1)
+        writeMotor(index2, t2)
+        lastSpeed[index1] = t1
+        lastSpeed[index2] = t2
     }
 
     /**
